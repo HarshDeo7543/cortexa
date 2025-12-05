@@ -11,7 +11,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Cortexa - Enterprise Document Management",
   description: "Secure document approval and workflow management platform",
-  generator: "v0.app",
+  generator: "cortexa",
   icons: {
     icon: [
       {
