@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LogOut, FileText, ClipboardCheck, Home, Plus, User, Users } from "lucide-react"
+import { LogOut, FileText, ClipboardCheck, Home, Plus, User, Users, ScrollText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/providers/auth-provider"
 import { createClient } from "@/lib/supabase/client"
@@ -36,6 +36,7 @@ export default function Navbar() {
 
   const isReviewer = ['junior_reviewer', 'compliance_officer', 'admin'].includes(userRole)
   const canManageUsers = ['admin', 'compliance_officer'].includes(userRole)
+  const isAdmin = userRole === 'admin'
   const isRegularUser = userRole === 'user'
 
   // Build nav links based on role
@@ -58,6 +59,11 @@ export default function Navbar() {
   // Users/Admin link for admin and compliance officer
   if (canManageUsers) {
     navLinks.push({ href: "/admin", label: "Users", icon: Users })
+  }
+
+  // Activity Logs for admin only
+  if (isAdmin) {
+    navLinks.push({ href: "/logs", label: "Logs", icon: ScrollText })
   }
 
   const isActive = (href: string) => pathname === href

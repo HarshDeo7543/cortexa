@@ -112,21 +112,10 @@ export async function GET(request: Request) {
 
         let applications: Application[]
 
-        if (userRole === 'admin') {
-            // Admin sees all applications
+        if (userRole === 'admin' || userRole === 'junior_reviewer' || userRole === 'compliance_officer') {
+            // Admin and reviewers see all applications
+            // This allows dashboard to show complete stats
             applications = await getAllApplications()
-        } else if (userRole === 'junior_reviewer') {
-            // Junior reviewer sees submitted applications
-            applications = await getAllApplications()
-            applications = applications.filter(app =>
-                app.status === 'submitted' || app.status === 'junior_review'
-            )
-        } else if (userRole === 'compliance_officer') {
-            // Compliance officer sees applications pending their review
-            applications = await getAllApplications()
-            applications = applications.filter(app =>
-                app.status === 'compliance_review'
-            )
         } else {
             // Regular users see only their own applications
             applications = await getApplicationsByUser(user.id)

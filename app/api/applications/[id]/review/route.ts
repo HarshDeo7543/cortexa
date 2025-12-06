@@ -9,6 +9,7 @@ import {
 } from '@/lib/aws/dynamodb'
 import { getUserRole, isJuniorReviewer, isComplianceOfficer, isAdmin } from '@/lib/auth/roles'
 import { signPdfDocument } from '@/lib/documents/sign-pdf'
+import { createActivityLog, generateLogId, type ActivityType } from '@/lib/aws/activity-logs'
 
 // POST: Review application (approve/reject)
 export async function POST(
@@ -143,6 +144,31 @@ export async function POST(
 
         // Update application
         await updateApplicationReview(id, newStatus, review, currentStep)
+
+        // Log the activity
+        const activityType: ActivityType = action === 'approved'
+            ? (newStatus === 'approved' ? 'application_approved' : 'application_reviewed')
+            : 'application_rejected'
+
+        await createActivityLog({
+            id: generateLogId(),
+            timestamp: new Date().toISOString(),
+            actorId: user.id,
+            actorName: user.user_metadata?.name || 'Unknown',
+            actorRole: reviewerRole,
+            actorEmail: user.email || 'Unknown',
+            actionType: activityType,
+            targetType: 'application',
+            targetId: id,
+            targetName: application.documentType,
+            details: `${action === 'approved' ? 'Approved' : 'Rejected'} application for ${application.fullName}${comment ? ` - Comment: ${comment}` : ''}`,
+            metadata: {
+                previousStatus: application.status,
+                newStatus,
+                applicantName: application.fullName,
+                documentType: application.documentType,
+            }
+        })
 
         // If fully approved, sign the PDF document
         let verificationCode: string | undefined
