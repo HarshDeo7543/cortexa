@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCachedUserRole, setCachedUserRole, invalidateUserCaches } from '@/lib/cache/redis'
 
 export type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
@@ -9,8 +10,15 @@ export interface UserWithRole {
     role: UserRole
 }
 
-// Get current user's role from Supabase
+// Get current user's role from cache or Supabase
 export async function getUserRole(userId: string): Promise<UserRole> {
+    // Try cache first
+    const cachedRole = await getCachedUserRole(userId)
+    if (cachedRole) {
+        return cachedRole as UserRole
+    }
+
+    // Fallback to Supabase
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -23,7 +31,12 @@ export async function getUserRole(userId: string): Promise<UserRole> {
         return 'user' // Default role
     }
 
-    return data.role as UserRole
+    const role = data.role as UserRole
+
+    // Cache the role for next time
+    await setCachedUserRole(userId, role)
+
+    return role
 }
 
 // Check if user has specific role

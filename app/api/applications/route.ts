@@ -8,6 +8,13 @@ import {
     type Application
 } from '@/lib/aws/dynamodb'
 import { getUserRole } from '@/lib/auth/roles'
+import {
+    getFromCache,
+    setInCache,
+    deleteFromCache,
+    CACHE_KEYS,
+    CACHE_TTL
+} from '@/lib/cache/redis'
 
 // POST: Create new application
 export async function POST(request: Request) {
@@ -64,6 +71,9 @@ export async function POST(request: Request) {
 
         await createApplication(application)
 
+        // Invalidate user's applications cache
+        await deleteFromCache(CACHE_KEYS.applicationsList(user.id, 'user'))
+
         return NextResponse.json({
             success: true,
             applicationId: application.id
@@ -90,6 +100,15 @@ export async function GET(request: Request) {
         const userRole = await getUserRole(user.id)
         const { searchParams } = new URL(request.url)
         const status = searchParams.get('status')
+
+        // Try to get from cache first (only for user's own applications without status filter)
+        const cacheKey = CACHE_KEYS.applicationsList(user.id, userRole)
+        if (!status || status === 'all') {
+            const cached = await getFromCache<Application[]>(cacheKey)
+            if (cached) {
+                return NextResponse.json({ applications: cached, cached: true })
+            }
+        }
 
         let applications: Application[]
 
@@ -123,6 +142,11 @@ export async function GET(request: Request) {
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
 
+        // Cache the unfiltered results
+        if (!status || status === 'all') {
+            await setInCache(cacheKey, applications, CACHE_TTL.APPLICATIONS_LIST)
+        }
+
         return NextResponse.json({ applications })
     } catch (error) {
         console.error('Get applications error:', error)
@@ -132,3 +156,4 @@ export async function GET(request: Request) {
         )
     }
 }
+

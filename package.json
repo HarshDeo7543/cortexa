@@ -43,6 +43,7 @@
     "@radix-ui/react-tooltip": "1.1.6",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.2",
+    "@upstash/redis": "^1.35.7",
     "@vercel/analytics": "latest",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
