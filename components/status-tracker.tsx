@@ -11,9 +11,10 @@ interface StatusStep {
 interface StatusTrackerProps {
   currentStatus: ApplicationStatus
   currentStep: number
+  isReviewer?: boolean // Optional prop to show neutral messages for reviewers
 }
 
-export default function StatusTracker({ currentStatus, currentStep }: StatusTrackerProps) {
+export default function StatusTracker({ currentStatus, currentStep, isReviewer = false }: StatusTrackerProps) {
   const getSteps = (): StatusStep[] => {
     const steps: StatusStep[] = [
       { label: "Submitted", status: "pending" },
@@ -69,35 +70,42 @@ export default function StatusTracker({ currentStatus, currentStep }: StatusTrac
   }
 
   const getStatusMessage = (): { icon: React.ReactNode; message: string; color: string } => {
+    // Use neutral language for reviewers, personal language for applicants
+    const prefix = isReviewer ? "This application" : "Your application"
+    
     switch (currentStatus) {
       case "submitted":
         return {
           icon: <Clock className="w-5 h-5" />,
-          message: "Your application has been submitted and is waiting for review.",
+          message: `${prefix} has been submitted and is waiting for review.`,
           color: "text-blue-500 bg-blue-500/10 border-blue-500/30",
         }
       case "junior_review":
         return {
           icon: <Clock className="w-5 h-5" />,
-          message: "Your application is being reviewed by a Junior Reviewer.",
+          message: `${prefix} is being reviewed by a Junior Reviewer.`,
           color: "text-amber-500 bg-amber-500/10 border-amber-500/30",
         }
       case "compliance_review":
         return {
           icon: <FileCheck className="w-5 h-5" />,
-          message: "Your application passed junior review and is now with the Compliance Officer.",
+          message: `${prefix} passed junior review and is now with the Compliance Officer.`,
           color: "text-purple-500 bg-purple-500/10 border-purple-500/30",
         }
       case "approved":
         return {
           icon: <CheckCircle className="w-5 h-5" />,
-          message: "Congratulations! Your application has been approved. You can now download your document.",
+          message: isReviewer 
+            ? "This application has been approved." 
+            : "Congratulations! Your application has been approved. You can now download your document.",
           color: "text-green-500 bg-green-500/10 border-green-500/30",
         }
       case "rejected":
         return {
           icon: <FileX className="w-5 h-5" />,
-          message: "Your application was rejected. Please review the comments and resubmit if needed.",
+          message: isReviewer 
+            ? "This application was rejected." 
+            : "Your application was rejected. Please review the comments and resubmit if needed.",
           color: "text-destructive bg-destructive/10 border-destructive/30",
         }
       default:

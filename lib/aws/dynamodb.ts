@@ -68,6 +68,10 @@ export interface Application {
     fileName: string
     fileSize: number
 
+    // Signed Document (after approval)
+    signedS3Key?: string
+    verificationCode?: string
+
     // Workflow
     status: ApplicationStatus
     currentStep: number
@@ -182,6 +186,25 @@ export async function resubmitApplication(
             ':s3Key': s3Key,
             ':fileName': fileName,
             ':fileSize': fileSize,
+            ':updatedAt': new Date().toISOString(),
+        },
+    }))
+}
+
+// Update application with signed document info
+export async function updateApplicationSignedDocument(
+    id: string,
+    signedS3Key: string,
+    verificationCode: string
+): Promise<void> {
+    const client = getDynamoClient()
+    await client.send(new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { id },
+        UpdateExpression: 'SET signedS3Key = :signedS3Key, verificationCode = :verificationCode, updatedAt = :updatedAt',
+        ExpressionAttributeValues: {
+            ':signedS3Key': signedS3Key,
+            ':verificationCode': verificationCode,
             ':updatedAt': new Date().toISOString(),
         },
     }))

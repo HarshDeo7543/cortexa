@@ -16,6 +16,9 @@ import {
 } from "lucide-react"
 import type { Application } from "@/lib/aws/dynamodb"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+
+type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
 export default function ApplicationsPage() {
   const router = useRouter()
@@ -23,12 +26,38 @@ export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>("all")
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [roleLoading, setRoleLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
+      fetchUserRole()
       fetchApplications()
     }
   }, [user])
+
+  const fetchUserRole = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user?.id)
+      .single()
+    
+    if (data?.role) {
+      setUserRole(data.role as UserRole)
+    } else {
+      setUserRole('user')
+    }
+    setRoleLoading(false)
+  }
+
+  // Redirect reviewers to /review page
+  useEffect(() => {
+    if (!roleLoading && userRole && userRole !== 'user') {
+      router.push('/review')
+    }
+  }, [userRole, roleLoading, router])
 
   const fetchApplications = async () => {
     try {
@@ -85,7 +114,16 @@ export default function ApplicationsPage() {
     ? applications 
     : applications.filter(app => app.status === filter)
 
-  if (authLoading || loading) {
+  if (authLoading || loading || roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // If user is a reviewer, show loading while redirecting
+  if (userRole && userRole !== 'user') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -34,7 +34,12 @@ export async function GET(
 
         // Generate download URL if approved or for reviewers
         let downloadUrl: string | null = null
-        if (application.status === 'approved' || userRole !== 'user') {
+        if (application.status === 'approved') {
+            // For approved applications, serve the signed document if available
+            const keyToDownload = application.signedS3Key || application.s3Key
+            downloadUrl = await getPresignedDownloadUrl(keyToDownload)
+        } else if (userRole !== 'user') {
+            // Reviewers can download the original document
             downloadUrl = await getPresignedDownloadUrl(application.s3Key)
         }
 

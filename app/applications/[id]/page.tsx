@@ -140,10 +140,13 @@ export default function ApplicationDetailPage({
       <Navbar />
       
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Back Button */}
-        <Link href="/applications" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6">
+        {/* Back Button - context aware */}
+        <Link 
+          href={canReview ? "/review" : "/applications"} 
+          className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Applications
+          {canReview ? "Back to Review Queue" : "Back to My Applications"}
         </Link>
 
         {/* Success Message */}
@@ -171,7 +174,8 @@ export default function ApplicationDetailPage({
           {/* Status Tracker */}
           <StatusTracker 
             currentStatus={application.status} 
-            currentStep={application.currentStep} 
+            currentStep={application.currentStep}
+            isReviewer={canReview}
           />
         </div>
 
