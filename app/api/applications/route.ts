@@ -1,0 +1,134 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { v4 as uuidv4 } from 'uuid'
+import {
+    createApplication,
+    getApplicationsByUser,
+    getAllApplications,
+    type Application
+} from '@/lib/aws/dynamodb'
+import { getUserRole } from '@/lib/auth/roles'
+
+// POST: Create new application
+export async function POST(request: Request) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const body = await request.json()
+
+        // Validate required fields
+        const requiredFields = [
+            'fullName', 'fatherHusbandName', 'age', 'phone', 'email',
+            'address', 'aadharNumber', 'digitalSignature', 'documentType',
+            'requiredByDate', 's3Key', 'fileName', 'fileSize'
+        ]
+
+        for (const field of requiredFields) {
+            if (!body[field]) {
+                return NextResponse.json(
+                    { error: `Missing required field: ${field}` },
+                    { status: 400 }
+                )
+            }
+        }
+
+        // Create application
+        const application: Application = {
+            id: uuidv4(),
+            userId: user.id,
+            fullName: body.fullName,
+            fatherHusbandName: body.fatherHusbandName,
+            age: body.age,
+            phone: body.phone,
+            email: body.email,
+            address: body.address,
+            aadharNumber: body.aadharNumber,
+            digitalSignature: body.digitalSignature,
+            documentType: body.documentType,
+            requiredByDate: body.requiredByDate,
+            governmentDepartment: body.governmentDepartment || undefined,
+            s3Key: body.s3Key,
+            fileName: body.fileName,
+            fileSize: body.fileSize,
+            status: 'submitted',
+            currentStep: 1,
+            reviews: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }
+
+        await createApplication(application)
+
+        return NextResponse.json({
+            success: true,
+            applicationId: application.id
+        })
+    } catch (error) {
+        console.error('Create application error:', error)
+        return NextResponse.json(
+            { error: 'Failed to create application' },
+            { status: 500 }
+        )
+    }
+}
+
+// GET: List applications (filtered by role)
+export async function GET(request: Request) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const userRole = await getUserRole(user.id)
+        const { searchParams } = new URL(request.url)
+        const status = searchParams.get('status')
+
+        let applications: Application[]
+
+        if (userRole === 'admin') {
+            // Admin sees all applications
+            applications = await getAllApplications()
+        } else if (userRole === 'junior_reviewer') {
+            // Junior reviewer sees submitted applications
+            applications = await getAllApplications()
+            applications = applications.filter(app =>
+                app.status === 'submitted' || app.status === 'junior_review'
+            )
+        } else if (userRole === 'compliance_officer') {
+            // Compliance officer sees applications pending their review
+            applications = await getAllApplications()
+            applications = applications.filter(app =>
+                app.status === 'compliance_review'
+            )
+        } else {
+            // Regular users see only their own applications
+            applications = await getApplicationsByUser(user.id)
+        }
+
+        // Filter by status if provided
+        if (status && status !== 'all') {
+            applications = applications.filter(app => app.status === status)
+        }
+
+        // Sort by newest first
+        applications.sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+
+        return NextResponse.json({ applications })
+    } catch (error) {
+        console.error('Get applications error:', error)
+        return NextResponse.json(
+            { error: 'Failed to fetch applications' },
+            { status: 500 }
+        )
+    }
+}
