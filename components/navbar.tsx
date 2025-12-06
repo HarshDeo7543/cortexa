@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LogOut, FileText, ClipboardCheck, Home, Plus, User } from "lucide-react"
+import { LogOut, FileText, ClipboardCheck, Home, Plus, User, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/providers/auth-provider"
 import { createClient } from "@/lib/supabase/client"
@@ -35,16 +35,29 @@ export default function Navbar() {
   }
 
   const isReviewer = ['junior_reviewer', 'compliance_officer', 'admin'].includes(userRole)
+  const canManageUsers = ['admin', 'compliance_officer'].includes(userRole)
+  const isRegularUser = userRole === 'user'
 
-  const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: Home },
-    { href: "/applications", label: "My Applications", icon: FileText },
-    { href: "/apply", label: "Apply", icon: Plus },
-  ]
+  // Build nav links based on role
+  const navLinks: { href: string; label: string; icon: typeof Home }[] = []
 
-  // Add review link for reviewers
+  // Dashboard for everyone
+  navLinks.push({ href: "/dashboard", label: "Dashboard", icon: Home })
+
+  // My Applications and Apply only for regular users
+  if (isRegularUser) {
+    navLinks.push({ href: "/applications", label: "My Applications", icon: FileText })
+    navLinks.push({ href: "/apply", label: "Apply", icon: Plus })
+  }
+
+  // Review link for reviewers
   if (isReviewer) {
     navLinks.push({ href: "/review", label: "Review", icon: ClipboardCheck })
+  }
+
+  // Users/Admin link for admin and compliance officer
+  if (canManageUsers) {
+    navLinks.push({ href: "/admin", label: "Users", icon: Users })
   }
 
   const isActive = (href: string) => pathname === href
