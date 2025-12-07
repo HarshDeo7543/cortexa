@@ -14,18 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Users,
-  Plus,
-  Trash2,
-  Shield,
-  ClipboardCheck,
-  UserCheck,
   Loader2,
   RefreshCw,
+  Trash2,
+  Plus,
+  X,
   Eye,
   EyeOff,
-  Copy,
-  CheckCircle,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
@@ -41,27 +36,23 @@ type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 const DEMO_CREDENTIALS = [
   {
     role: "Admin",
-    email: "harshdeo7543@gmail.com",
+    email: "Harshdeo7543@gmail.com",
     password: "Harsh@123",
-    description: "Full access to manage all reviewers",
-  },
-  {
-    role: "Compliance Officer",
-    email: "compliance@cortexa.demo",
-    password: "Compliance@123",
-    description: "Final review + manage Junior Reviewers",
   },
   {
     role: "Junior Reviewer",
-    email: "junior@cortexa.demo",
-    password: "Junior@123",
-    description: "First-level document review",
+    email: "hdevjharkhand@gmail.com",
+    password: "Harsh@123",
   },
   {
-    role: "User",
-    email: "user@cortexa.demo",
-    password: "User@123",
-    description: "Submit and track applications",
+    role: "Compliance Officer",
+    email: "harshdeo5142@gmail.com",
+    password: "Harsh@123",
+  },
+  {
+    role: "User (Google)",
+    email: "harsh.arcade.2025@gmail.com",
+    password: "Sign in with Google",
   },
 ]
 
@@ -77,9 +68,7 @@ export default function AdminPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [showPasswords, setShowPasswords] = useState(false)
-  const [copiedField, setCopiedField] = useState("")
 
-  // Create form state
   const [newUser, setNewUser] = useState({
     email: "",
     password: "",
@@ -95,7 +84,6 @@ export default function AdminPage() {
     }
   }, [user, authLoading])
 
-  // Redirect if user doesn't have permission
   useEffect(() => {
     if (!authLoading && !roleLoading) {
       const canManage = userRole ? ['admin', 'compliance_officer'].includes(userRole) : false
@@ -114,19 +102,14 @@ export default function AdminPage() {
   const fetchUserRole = async () => {
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user?.id)
         .single()
       
-      if (data?.role) {
-        setUserRole(data.role as UserRole)
-      } else {
-        setUserRole('user')
-      }
-    } catch (err) {
-      console.error('Failed to fetch role:', err)
+      setUserRole(data?.role as UserRole || 'user')
+    } catch {
       setUserRole('user')
     } finally {
       setRoleLoading(false)
@@ -180,7 +163,7 @@ export default function AdminPage() {
       } else {
         setError(data.error || "Failed to create user")
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.")
     } finally {
       setIsCreating(false)
@@ -202,38 +185,13 @@ export default function AdminPage() {
         const data = await response.json()
         setError(data.error || "Failed to delete user")
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.")
     }
   }
 
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text)
-    setCopiedField(field)
-    setTimeout(() => setCopiedField(""), 2000)
-  }
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return <Shield className="w-4 h-4 text-red-500" />
-      case "compliance_officer":
-        return <UserCheck className="w-4 h-4 text-purple-500" />
-      case "junior_reviewer":
-        return <ClipboardCheck className="w-4 h-4 text-amber-500" />
-      default:
-        return <Users className="w-4 h-4 text-blue-500" />
-    }
-  }
-
-  const getRoleBadge = (role: string) => {
-    const styles: Record<string, string> = {
-      admin: "bg-red-500/10 text-red-500 border-red-500/30",
-      compliance_officer: "bg-purple-500/10 text-purple-500 border-purple-500/30",
-      junior_reviewer: "bg-amber-500/10 text-amber-500 border-amber-500/30",
-      user: "bg-blue-500/10 text-blue-500 border-blue-500/30",
-    }
-    return styles[role] || styles.user
+  const formatRole = (role: string) => {
+    return role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
   }
 
   const canManage = userRole ? ['admin', 'compliance_officer'].includes(userRole) : false
@@ -241,89 +199,80 @@ export default function AdminPage() {
     ? ['junior_reviewer', 'compliance_officer'] 
     : ['junior_reviewer']
 
-  if (authLoading || roleLoading) {
+  if (authLoading || roleLoading || !user || !canManage) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  // Show loading while redirect happens via useEffect
-  if (!user || !canManage) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-slate-50 dark:bg-background flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-slate-50 dark:bg-background">
       <Navbar />
       
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">User Management</h1>
-              <p className="text-muted-foreground">
-                Manage reviewer accounts and permissions
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Users</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Manage reviewer accounts
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchUsers}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={fetchUsers}
+              disabled={usersLoading}
+            >
+              <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
             </Button>
-            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Reviewer
+            <Button 
+              size="sm"
+              onClick={() => setShowCreateForm(true)}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add user
             </Button>
           </div>
         </div>
 
         {/* Messages */}
         {error && (
-          <div className="bg-destructive/10 border border-destructive/30 text-destructive p-3 rounded-lg mb-6 text-sm">
+          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 px-4 py-3 rounded-lg mb-6 text-sm">
             {error}
           </div>
         )}
         {success && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-500 p-3 rounded-lg mb-6 text-sm flex items-center gap-2">
-            <CheckCircle className="w-4 h-4" />
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-lg mb-6 text-sm">
             {success}
           </div>
         )}
 
         {/* Create User Form */}
         {showCreateForm && (
-          <div className="bg-card border border-border rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-primary" />
-              Create New Reviewer Account
-            </h2>
+          <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-medium text-slate-900 dark:text-white">New reviewer account</h2>
+              <button onClick={() => setShowCreateForm(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-2">
-                  Full Name *
-                </label>
+                <label className="text-sm text-slate-600 dark:text-slate-400 block mb-1.5">Name</label>
                 <Input
-                  placeholder="Enter full name"
+                  placeholder="Full name"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-2">
-                  Email *
-                </label>
+                <label className="text-sm text-slate-600 dark:text-slate-400 block mb-1.5">Email</label>
                 <Input
                   type="email"
                   placeholder="email@example.com"
@@ -332,9 +281,7 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-2">
-                  Password *
-                </label>
+                <label className="text-sm text-slate-600 dark:text-slate-400 block mb-1.5">Password</label>
                 <Input
                   type="password"
                   placeholder="Minimum 8 characters"
@@ -343,9 +290,7 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-2">
-                  Role *
-                </label>
+                <label className="text-sm text-slate-600 dark:text-slate-400 block mb-1.5">Role</label>
                 <Select 
                   value={newUser.role} 
                   onValueChange={(v) => setNewUser({ ...newUser, role: v })}
@@ -356,7 +301,7 @@ export default function AdminPage() {
                   <SelectContent>
                     {availableRoles.map((role) => (
                       <SelectItem key={role} value={role}>
-                        {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {formatRole(role)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -365,132 +310,92 @@ export default function AdminPage() {
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={handleCreateUser} disabled={isCreating}>
+              <Button 
+                onClick={handleCreateUser} 
+                disabled={isCreating}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
                 {isCreating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Account
-                  </>
+                  "Create account"
                 )}
               </Button>
-              <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+              <Button variant="ghost" onClick={() => setShowCreateForm(false)}>
                 Cancel
               </Button>
             </div>
           </div>
         )}
 
-        {/* Demo Credentials Card */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Demo Credentials
-            </h2>
-            <Button 
-              variant="ghost" 
-              size="sm"
+        {/* Demo Credentials */}
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg mb-6">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-border flex items-center justify-between">
+            <div>
+              <h2 className="font-medium text-slate-900 dark:text-white">Demo accounts</h2>
+              <p className="text-sm text-slate-500 mt-0.5">Use these to test different roles</p>
+            </div>
+            <button 
               onClick={() => setShowPasswords(!showPasswords)}
+              className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1.5"
             >
               {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {showPasswords ? "Hide" : "Show"} Passwords
-            </Button>
+              {showPasswords ? "Hide" : "Show"}
+            </button>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+          <div className="divide-y divide-slate-100 dark:divide-border">
             {DEMO_CREDENTIALS.map((cred) => (
-              <div 
-                key={cred.role}
-                className="p-4 rounded-lg border border-border bg-background/50"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {getRoleIcon(cred.role.toLowerCase().replace(' ', '_'))}
-                  <span className="font-semibold">{cred.role}</span>
+              <div key={cred.role} className="px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-slate-900 dark:text-white w-36">
+                    {cred.role}
+                  </span>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    {cred.email}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-3">{cred.description}</p>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded">
-                    <span className="text-muted-foreground">Email:</span>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs">{cred.email}</code>
-                      <button 
-                        onClick={() => copyToClipboard(cred.email, `${cred.role}-email`)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        {copiedField === `${cred.role}-email` 
-                          ? <CheckCircle className="w-3 h-3 text-green-500" />
-                          : <Copy className="w-3 h-3" />
-                        }
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded">
-                    <span className="text-muted-foreground">Password:</span>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs">
-                        {showPasswords ? cred.password : "••••••••"}
-                      </code>
-                      <button 
-                        onClick={() => copyToClipboard(cred.password, `${cred.role}-pass`)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        {copiedField === `${cred.role}-pass` 
-                          ? <CheckCircle className="w-3 h-3 text-green-500" />
-                          : <Copy className="w-3 h-3" />
-                        }
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">
+                  {showPasswords ? cred.password : "••••••••"}
+                </code>
               </div>
             ))}
           </div>
         </div>
 
         {/* Users List */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Reviewer Accounts
-          </h2>
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-border">
+            <h2 className="font-medium text-slate-900 dark:text-white">All users</h2>
+            <p className="text-sm text-slate-500 mt-0.5">{users.length} accounts</p>
+          </div>
           
           {users.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p>No reviewer accounts found</p>
-              <p className="text-sm">Create one using the button above</p>
+            <div className="px-6 py-12 text-center">
+              <p className="text-slate-500">No users found</p>
+              <p className="text-sm text-slate-400 mt-1">Create one using the button above</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-slate-100 dark:divide-border">
               {users.map((u) => (
-                <div 
-                  key={u.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border bg-background/50"
-                >
-                  <div className="flex items-center gap-3">
-                    {getRoleIcon(u.role)}
+                <div key={u.id} className="px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
                     <div>
-                      <p className="font-medium">{u.id.slice(0, 8)}...</p>
-                      <p className="text-xs text-muted-foreground">
-                        Created: {new Date(u.createdAt).toLocaleDateString()}
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                        {u.email || u.id.slice(0, 8) + '...'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatRole(u.role)} • {new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getRoleBadge(u.role)}`}>
-                      {u.role.replace('_', ' ')}
-                    </span>
                   </div>
-                  
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    className="text-destructive hover:bg-destructive/10"
                     onClick={() => handleDeleteUser(u.id)}
+                    className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
