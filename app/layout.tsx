@@ -13,21 +13,8 @@ export const metadata: Metadata = {
   description: "Secure document approval and workflow management platform",
   generator: "cortexa",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/C.png",
+    apple: "/C.png",
   },
 }
 
