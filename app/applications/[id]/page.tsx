@@ -207,7 +207,7 @@ export default function ApplicationDetailPage({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               {/* Applicant */}
-              <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg p-4">
+              <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg p-4 h-full">
                 <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">Applicant</h3>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
@@ -234,7 +234,7 @@ export default function ApplicationDetailPage({
               </div>
 
               {/* Document */}
-              <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg p-4">
+              <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg p-4 h-full">
                 <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">Document</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -276,20 +276,29 @@ export default function ApplicationDetailPage({
             {application.reviews.length > 0 && (
               <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg p-4">
                 <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">Review History</h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {application.reviews.map((review: Review, i: number) => (
-                    <div key={i} className={`flex items-center justify-between p-3 rounded-lg ${review.action === "approved" ? "bg-emerald-50 dark:bg-emerald-900/10" : "bg-rose-50 dark:bg-rose-900/10"}`}>
-                      <div className="flex items-center gap-3">
-                        {review.action === "approved" ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-rose-500" />}
-                        <div>
-                          <p className="text-sm font-medium text-slate-900 dark:text-white capitalize">{review.reviewerRole.replace("_", " ")}</p>
-                          <p className="text-xs text-slate-500">{review.reviewerName}</p>
+                    <div key={i} className={`p-3 rounded-lg border ${review.action === "approved" ? "bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20" : "bg-rose-50/50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/20"}`}>
+                      <div className="flex items-start justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          {review.action === "approved" ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-rose-500" />}
+                          <div>
+                            <span className="text-sm font-medium text-slate-900 dark:text-white capitalize">{review.reviewerRole.replace("_", " ")}</span>
+                            <span className="text-xs text-slate-400 ml-2">{review.reviewerName}</span>
+                          </div>
+                        </div>
+                        <div className="text-right flex items-center gap-2">
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${review.action === "approved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>
+                            {review.action}
+                          </span>
+                          <span className="text-xs text-slate-500">{new Date(review.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-xs font-medium ${review.action === "approved" ? "text-emerald-600" : "text-rose-600"}`}>{review.action}</p>
-                        <p className="text-xs text-slate-500">{new Date(review.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                      </div>
+                      {review.comment && (
+                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic pl-6">
+                          "{review.comment}"
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
