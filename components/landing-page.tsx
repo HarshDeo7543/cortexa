@@ -38,9 +38,9 @@ export default function LandingPage() {
                 For government offices & enterprises
               </p>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 dark:text-white leading-[1.1] tracking-tight max-w-3xl">
-                Stop chasing approvals.<br />
-                Start tracking them.
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight max-w-3xl">
+                <span className="text-slate-900 dark:text-white">Stop chasing approvals.</span><br />
+                <span className="text-teal-600">Start tracking them.</span>
               </h1>
               
               <p className="mt-6 text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
@@ -52,7 +52,7 @@ export default function LandingPage() {
                 <Button 
                   size="lg" 
                   onClick={() => setShowAuth(true)}
-                  className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white h-12 px-6 text-base"
+                  className="bg-teal-600 hover:bg-teal-700 text-white h-12 px-6 text-base"
                 >
                   Start for free
                 </Button>
@@ -60,8 +60,9 @@ export default function LandingPage() {
                   size="lg" 
                   variant="ghost"
                   className="text-slate-600 dark:text-slate-400 h-12 px-6 text-base"
+                  asChild
                 >
-                  See how it works
+                  <a href="#how-it-works">See how it works</a>
                 </Button>
               </div>
             </>
@@ -108,7 +109,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works - Simple Steps, No Icons */}
-      <section className="py-24 px-6 bg-slate-50 dark:bg-slate-900/30">
+      <section id="how-it-works" className="py-24 px-6 bg-slate-50 dark:bg-slate-900/30">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-12">
             How it works
