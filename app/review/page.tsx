@@ -196,75 +196,57 @@ export default function ReviewPage() {
             
             {/* Stats Cards */}
             <div className="bg-white dark:bg-card rounded-lg border border-slate-200 dark:border-border p-4">
-              <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Overview</span>
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Filter</span>
               
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-1">
                 <button 
                   onClick={() => setFilter("pending")}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition ${
                     filter === 'pending' 
-                      ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Pending</span>
-                  </div>
-                  <span className="text-lg font-semibold text-amber-600">{stats.pending}</span>
+                  <span>Pending</span>
+                  <span className={`font-medium ${filter === 'pending' ? '' : 'text-amber-600'}`}>{stats.pending}</span>
                 </button>
                 
                 <button 
                   onClick={() => setFilter("approved")}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition ${
                     filter === 'approved' 
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Approved</span>
-                  </div>
-                  <span className="text-lg font-semibold text-emerald-600">{stats.approved}</span>
+                  <span>Approved</span>
+                  <span className={`font-medium ${filter === 'approved' ? '' : 'text-emerald-600'}`}>{stats.approved}</span>
                 </button>
                 
                 <button 
                   onClick={() => setFilter("rejected")}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition ${
                     filter === 'rejected' 
-                      ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
-                      <XCircle className="w-4 h-4 text-rose-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Rejected</span>
-                  </div>
-                  <span className="text-lg font-semibold text-rose-600">{stats.rejected}</span>
+                  <span>Rejected</span>
+                  <span className={`font-medium ${filter === 'rejected' ? '' : 'text-rose-600'}`}>{stats.rejected}</span>
                 </button>
+                
+                <div className="border-t border-slate-100 dark:border-border my-2"></div>
                 
                 <button 
                   onClick={() => setFilter("all")}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition ${
                     filter === 'all' 
-                      ? 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-slate-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">All</span>
-                  </div>
-                  <span className="text-lg font-semibold text-slate-600">{stats.total}</span>
+                  <span>All</span>
+                  <span className="font-medium">{stats.total}</span>
                 </button>
               </div>
             </div>
