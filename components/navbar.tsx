@@ -73,10 +73,10 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">C</span>
+          <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-lg">C</span>
           </div>
-          <span className="font-bold text-lg">Cortexa</span>
+          <span className="font-semibold text-lg text-slate-900 dark:text-white">Cortexa</span>
         </Link>
 
         {/* Navigation Links */}

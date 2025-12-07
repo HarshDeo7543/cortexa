@@ -14,7 +14,8 @@ import {
   User,
   Calendar,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Download
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -73,6 +74,32 @@ export default function LogsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const exportToExcel = () => {
+    if (filteredLogs.length === 0) return
+
+    const headers = ['Timestamp', 'Actor Name', 'Actor Email', 'Actor Role', 'Action', 'Details', 'Target']
+    const rows = filteredLogs.map(log => [
+      new Date(log.timestamp).toLocaleString('en-IN'),
+      log.actorName || '',
+      log.actorEmail || '',
+      log.actorRole || '',
+      getActionLabel(log.actionType),
+      log.details || '',
+      log.targetName || ''
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `cortexa-logs-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
   }
 
   const filteredLogs = logs.filter((log) => {
@@ -175,16 +202,28 @@ export default function LogsPage() {
               Monitor reviewer actions across the system
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchLogs}
-            disabled={loading}
-            className="gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportToExcel}
+              disabled={filteredLogs.length === 0}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchLogs}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Stats Bar */}
