@@ -170,15 +170,6 @@ Each approved document receives:
 - Unique verification code
 - Complete audit trail
 
-## Demo Accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | Harshdeo7543@gmail.com | Harsh@123 |
-| Junior Reviewer | hdevjharkhand@gmail.com | Harsh@123 |
-| Compliance Officer | harshdeo5142@gmail.com | Harsh@123 |
-| User (Google) | harsh.arcade.2025@gmail.com | Sign in with Google |
-
 ## API Routes
 
 | Endpoint | Method | Description |
