@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { 
   Search,
   Loader2,
-  CheckCircle2,
+  CheckCircle,
   XCircle,
   FileCheck,
   UserCog,
@@ -15,7 +15,8 @@ import {
   Calendar,
   Filter,
   RefreshCw,
-  Download
+  Download,
+  Activity
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,7 +100,7 @@ export default function LogsPage() {
   const getActionIcon = (type: string) => {
     switch (type) {
       case 'application_approved':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+        return <CheckCircle className="w-4 h-4 text-emerald-500" />
       case 'application_rejected':
         return <XCircle className="w-4 h-4 text-rose-500" />
       case 'application_reviewed':
@@ -210,23 +211,25 @@ export default function LogsPage() {
           </div>
         </div>
 
-        {/* Stats Bar */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-card rounded-lg border border-slate-200 dark:border-border p-4">
-            <div className="text-2xl font-semibold text-slate-900 dark:text-white">{logs.length}</div>
-            <div className="text-xs text-slate-500 mt-1">Total Actions</div>
-          </div>
-          <div className="bg-white dark:bg-card rounded-lg border border-slate-200 dark:border-border p-4">
-            <div className="text-2xl font-semibold text-emerald-600">{logs.filter(l => l.actionType === 'application_approved').length}</div>
-            <div className="text-xs text-slate-500 mt-1">Approved</div>
-          </div>
-          <div className="bg-white dark:bg-card rounded-lg border border-slate-200 dark:border-border p-4">
-            <div className="text-2xl font-semibold text-rose-600">{logs.filter(l => l.actionType === 'application_rejected').length}</div>
-            <div className="text-xs text-slate-500 mt-1">Rejected</div>
-          </div>
-          <div className="bg-white dark:bg-card rounded-lg border border-slate-200 dark:border-border p-4">
-            <div className="text-2xl font-semibold text-amber-600">{logs.filter(l => l.actionType === 'application_reviewed').length}</div>
-            <div className="text-xs text-slate-500 mt-1">In Review</div>
+        {/* Stats Overview */}
+        <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border p-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div className="relative pl-4 border-l-2 border-slate-300 dark:border-slate-600">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total Actions</p>
+              <p className="text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">{logs.length}</p>
+            </div>
+            <div className="relative pl-4 border-l-2 border-emerald-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Approved</p>
+              <p className="text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">{logs.filter(l => l.actionType === 'application_approved').length}</p>
+            </div>
+            <div className="relative pl-4 border-l-2 border-rose-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Rejected</p>
+              <p className="text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">{logs.filter(l => l.actionType === 'application_rejected').length}</p>
+            </div>
+            <div className="relative pl-4 border-l-2 border-amber-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">In Review</p>
+              <p className="text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">{logs.filter(l => l.actionType === 'application_reviewed').length}</p>
+            </div>
           </div>
         </div>
 
