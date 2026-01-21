@@ -4,7 +4,7 @@ A modern document approval and verification platform built for government office
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Supabase](https://img.shields.io/badge/Supabase-Auth-green)
+![Firebase](https://img.shields.io/badge/Firebase-Auth-orange)
 ![AWS](https://img.shields.io/badge/AWS-S3%20%7C%20DynamoDB-orange)
 
 ## Features
@@ -16,10 +16,10 @@ A modern document approval and verification platform built for government office
 - **Role-Based Access** - Admin, Compliance Officer, Junior Reviewer, and User roles
 
 ### Technical Features
-- **Supabase Authentication** - Email/password and Google OAuth
+- **Firebase Authentication** - Email/password and Google OAuth with Custom Claims for roles
 - **AWS S3 Storage** - Secure document storage with presigned URLs
 - **DynamoDB** - Fast NoSQL storage for applications and activity logs
-- **Upstash Redis** - Caching for improved performance
+- **Upstash Redis** - Optional caching for improved performance
 - **Real-time Status Tracking** - Track applications through the approval pipeline
 
 ## Tech Stack
@@ -30,10 +30,10 @@ A modern document approval and verification platform built for government office
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 |
 | UI Components | Radix UI + shadcn/ui |
-| Authentication | Supabase Auth |
+| Authentication | Firebase Auth |
 | Database | AWS DynamoDB |
 | File Storage | AWS S3 |
-| Caching | Upstash Redis |
+| Caching | Upstash Redis (optional) |
 | PDF Processing | pdf-lib |
 | Deployment | Vercel |
 
@@ -57,8 +57,9 @@ cortexa/
 │   └── *.tsx           # Feature components
 ├── lib/
 │   ├── aws/            # S3 and DynamoDB utilities
-│   ├── supabase/       # Supabase client
-│   └── redis.ts        # Upstash Redis client
+│   ├── firebase/       # Firebase client and admin SDK
+│   ├── auth/           # Role management with Custom Claims
+│   └── cache/          # Upstash Redis client
 └── public/             # Static assets
 ```
 
@@ -68,18 +69,27 @@ cortexa/
 
 - Node.js 18+
 - pnpm (recommended) or npm
-- Supabase account
+- Firebase project
 - AWS account (S3 + DynamoDB)
-- Upstash Redis account
+- Upstash Redis account (optional)
 
 ### Environment Variables
 
 Create a `.env.local` file:
 
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Firebase (Client-side)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Firebase Admin (Server-side)
+FIREBASE_ADMIN_PROJECT_ID=your_project_id
+FIREBASE_ADMIN_CLIENT_EMAIL=your_service_account_email
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
 # AWS
 AWS_REGION=ap-south-1
@@ -89,7 +99,7 @@ AWS_S3_BUCKET=your_bucket_name
 AWS_DYNAMODB_TABLE=cortexa-applications
 AWS_DYNAMODB_LOGS_TABLE=cortexa-logs
 
-# Upstash Redis
+# Upstash Redis (Optional)
 UPSTASH_REDIS_REST_URL=your_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_redis_token
 ```
@@ -110,39 +120,27 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-### Database Setup
+### Firebase Setup
 
-#### Supabase
+1. Create a project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable **Email/Password** and **Google** authentication
+3. Get your Web App config and Service Account key
+4. Add credentials to `.env.local`
 
-Create a `user_roles` table:
+#### Role Management
 
-```sql
-CREATE TABLE user_roles (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'user',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id)
-);
+User roles are stored as **Firebase Custom Claims**:
 
--- Enable RLS
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+```typescript
+// Set role (server-side)
+import { setUserRole } from '@/lib/firebase/admin'
+await setUserRole(userId, 'admin')
 
--- Policy for users to read their own role
-CREATE POLICY "Users can read own role" ON user_roles
-  FOR SELECT USING (auth.uid() = user_id);
-
--- Policy for admins to manage roles
-CREATE POLICY "Admins can manage roles" ON user_roles
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM user_roles 
-      WHERE user_id = auth.uid() AND role = 'admin'
-    )
-  );
+// Get role (client-side via AuthContext)
+const { role } = useAuth()
 ```
 
-#### AWS DynamoDB
+### AWS DynamoDB
 
 Create two tables:
 1. `cortexa-applications` - Primary key: `id` (String)
@@ -161,8 +159,8 @@ Create two tables:
 
 ```
 User Submits → Junior Review → Compliance Review → Approved/Rejected
-    ↓              ↓                ↓                    ↓
- submitted    junior_review   compliance_review    approved/rejected
+     ↓              ↓                ↓                    ↓
+  submitted    junior_review   compliance_review    approved/rejected
 ```
 
 Each approved document receives:
@@ -177,11 +175,11 @@ Each approved document receives:
 | `/api/applications` | GET, POST | List/create applications |
 | `/api/applications/[id]` | GET | Get single application |
 | `/api/applications/[id]/review` | POST | Submit review action |
-| `/api/applications/[id]/download` | GET | Download document |
+| `/api/auth/session` | POST, DELETE | Manage Firebase session cookies |
 | `/api/users` | GET, POST | List/create users |
 | `/api/users/[id]` | DELETE | Delete user |
 | `/api/logs` | GET | Get activity logs |
-| `/api/user-role` | GET | Get current user's role |
+| `/api/upload` | POST | Get presigned upload URL |
 
 ## Deployment
 
@@ -192,11 +190,10 @@ Each approved document receives:
 3. Add environment variables
 4. Deploy
 
-### Supabase Configuration
+### Firebase Configuration
 
-Update in Supabase Dashboard → Authentication → URL Configuration:
-- Site URL: `https://your-domain.vercel.app`
-- Redirect URLs: `https://your-domain.vercel.app/**`
+Update in Firebase Console → Authentication → Settings → Authorized domains:
+- Add your Vercel domain: `your-domain.vercel.app`
 
 ## Scripts
 
