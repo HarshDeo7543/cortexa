@@ -25,39 +25,26 @@ import Navbar from "@/components/navbar"
 import { useAuth } from "@/components/providers/auth-provider"
 import type { Application } from "@/lib/aws/dynamodb"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 
 type Status = "all" | "submitted" | "junior_review" | "compliance_review" | "approved" | "rejected"
 type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
 export default function Dashboard() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, role, loading: authLoading } = useAuth()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState<Status>("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [userRole, setUserRole] = useState<UserRole>('user')
+  
+  // Use role from auth context (Firebase custom claims)
+  const userRole = (role || 'user') as UserRole
 
   useEffect(() => {
     if (user) {
       fetchApplications()
-      fetchUserRole()
     }
   }, [user])
-
-  const fetchUserRole = async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id)
-      .single()
-    
-    if (data?.role) {
-      setUserRole(data.role as UserRole)
-    }
-  }
 
   const fetchApplications = async () => {
     setLoading(true)
@@ -148,7 +135,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
-            Welcome back{user.user_metadata?.name ? `, ${user.user_metadata.name.split(' ')[0]}` : ''}
+            Welcome back{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             {userRole === 'user' 

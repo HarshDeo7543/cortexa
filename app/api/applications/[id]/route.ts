@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
 import { getApplication } from '@/lib/aws/dynamodb'
 import { getPresignedDownloadUrl } from '@/lib/aws/s3'
 import { getUserRole } from '@/lib/auth/roles'
@@ -12,8 +12,7 @@ export async function GET(
     try {
         const { id } = await params
 
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -25,10 +24,10 @@ export async function GET(
             return NextResponse.json({ error: 'Application not found' }, { status: 404 })
         }
 
-        const userRole = await getUserRole(user.id)
+        const userRole = await getUserRole(user.uid)
 
         // Check access: user can only view their own, reviewers/admin can view all
-        if (userRole === 'user' && application.userId !== user.id) {
+        if (userRole === 'user' && application.userId !== user.uid) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 

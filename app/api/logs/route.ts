@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
 import { getAllActivityLogs, getActivityLogsByActor, getActivityLogsByType, type ActivityType } from '@/lib/aws/activity-logs'
 import { isAdmin } from '@/lib/auth/roles'
 
 // GET: Get activity logs (admin only)
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         // Only admin can view logs
-        const userIsAdmin = await isAdmin(user.id)
+        const userIsAdmin = await isAdmin(user.uid)
         if (!userIsAdmin) {
             return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
         }

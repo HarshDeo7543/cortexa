@@ -21,45 +21,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Navbar from "@/components/navbar"
 import { useAuth } from "@/components/providers/auth-provider"
-import { createClient } from "@/lib/supabase/client"
 import type { ActivityLog } from "@/lib/aws/activity-logs"
 
 type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
 export default function LogsPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, role, loading: authLoading } = useAuth()
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterOpen, setFilterOpen] = useState(false)
-
-  useEffect(() => {
-    if (user) {
-      fetchUserRole()
-    }
-  }, [user])
+  
+  // Use role from auth context (Firebase custom claims)
+  const userRole = (role || 'user') as UserRole
 
   useEffect(() => {
     if (userRole === 'admin') {
       fetchLogs()
-    } else if (userRole && userRole !== 'admin') {
+    } else if (role && role !== 'admin') {
       router.push('/dashboard')
     }
-  }, [userRole])
-
-  const fetchUserRole = async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id)
-      .single()
-    
-    setUserRole((data?.role as UserRole) || 'user')
-  }
+  }, [userRole, role])
 
   const fetchLogs = async () => {
     setLoading(true)
@@ -177,7 +161,7 @@ export default function LogsPage() {
     })
   }
 
-  if (authLoading || !userRole) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-background flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-slate-400" />

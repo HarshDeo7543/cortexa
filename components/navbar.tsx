@@ -6,33 +6,13 @@ import { usePathname } from "next/navigation"
 import { LogOut, FileText, ClipboardCheck, Home, Plus, User, Users, ScrollText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/providers/auth-provider"
-import { createClient } from "@/lib/supabase/client"
 
 type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
 export default function Navbar() {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
-  const [userRole, setUserRole] = useState<UserRole>('user')
-
-  useEffect(() => {
-    if (user) {
-      fetchUserRole()
-    }
-  }, [user])
-
-  const fetchUserRole = async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id)
-      .single()
-    
-    if (data?.role) {
-      setUserRole(data.role as UserRole)
-    }
-  }
+  const { user, role, signOut } = useAuth()
+  const userRole = (role || 'user') as UserRole
 
   const isReviewer = ['junior_reviewer', 'compliance_officer', 'admin'].includes(userRole)
   const canManageUsers = ['admin', 'compliance_officer'].includes(userRole)
@@ -107,7 +87,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-sm">
                 <User className="w-4 h-4" />
                 <span className="max-w-32 truncate">
-                  {user.user_metadata?.name || user.email?.split('@')[0]}
+                  {user.displayName || user.email?.split('@')[0]}
                 </span>
                 {isReviewer && (
                   <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs capitalize">

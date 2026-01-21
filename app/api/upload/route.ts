@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
 import { getPresignedUploadUrl, generateS3Key } from '@/lib/aws/s3'
 
 export async function POST(request: Request) {
     try {
         // Check authentication
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
         }
 
         // Generate S3 key and presigned URL
-        const s3Key = generateS3Key(user.id, fileName)
+        const s3Key = generateS3Key(user.uid, fileName)
         const uploadUrl = await getPresignedUploadUrl(s3Key, contentType)
 
         return NextResponse.json({

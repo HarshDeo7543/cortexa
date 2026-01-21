@@ -1,49 +1,35 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { getUserRole, isAdmin, isComplianceOfficer } from '@/lib/auth/roles'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
+import { listUsers, setUserRole, getAdminAuth } from '@/lib/firebase/admin'
+import { getUserRole } from '@/lib/auth/roles'
 
 // GET: List all users with their roles (admin/compliance only)
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const userRole = await getUserRole(user.id)
+        const userRole = await getUserRole(user.uid)
 
         // Only admin and compliance officer can view users
         if (!['admin', 'compliance_officer'].includes(userRole)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Get all users with roles
-        const { data: roles, error } = await supabase
-            .from('user_roles')
-            .select('user_id, role, created_at')
-            .order('created_at', { ascending: false })
-
-        if (error) {
-            throw error
-        }
-
-        // Get user emails from auth (admin API not available on client, so we store email in metadata)
-        const users = roles?.map(r => ({
-            id: r.user_id,
-            role: r.role,
-            createdAt: r.created_at,
-        })) || []
+        // Get all users from Firebase
+        const allUsers = await listUsers()
 
         // Filter based on role permissions
-        let filteredUsers = users
+        let filteredUsers = allUsers
         if (userRole === 'compliance_officer') {
             // Compliance officer can only see junior reviewers
-            filteredUsers = users.filter(u => u.role === 'junior_reviewer')
+            filteredUsers = allUsers.filter(u => u.role === 'junior_reviewer')
         } else if (userRole === 'admin') {
             // Admin can see junior reviewers and compliance officers (not normal users)
-            filteredUsers = users.filter(u => ['junior_reviewer', 'compliance_officer'].includes(u.role))
+            filteredUsers = allUsers.filter(u => ['junior_reviewer', 'compliance_officer'].includes(u.role))
         }
 
         return NextResponse.json({ users: filteredUsers })
@@ -56,14 +42,13 @@ export async function GET(request: Request) {
 // POST: Create new reviewer account
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const currentUser = await getAuthenticatedUser()
 
-        if (!user) {
+        if (!currentUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const userRole = await getUserRole(user.id)
+        const userRole = await getUserRole(currentUser.uid)
         const body = await request.json()
         const { email, password, name, role } = body
 
@@ -87,46 +72,27 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Create user using Supabase Auth admin (sign up)
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        // Create user using Firebase Admin SDK
+        const auth = getAdminAuth()
+        const newUser = await auth.createUser({
             email,
             password,
-            options: {
-                data: {
-                    name,
-                    full_name: name,
-                },
-            },
+            displayName: name,
         })
 
-        if (signUpError) {
-            return NextResponse.json({ error: signUpError.message }, { status: 400 })
-        }
-
-        if (!signUpData.user) {
-            return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
-        }
-
-        // Update the role (trigger creates default 'user' role, we need to update it)
-        const { error: updateError } = await supabase
-            .from('user_roles')
-            .update({ role })
-            .eq('user_id', signUpData.user.id)
-
-        if (updateError) {
-            // If update fails, try insert
-            await supabase
-                .from('user_roles')
-                .insert({ user_id: signUpData.user.id, role })
-        }
+        // Set the role as custom claim
+        await setUserRole(newUser.uid, role)
 
         return NextResponse.json({
             success: true,
-            userId: signUpData.user.id,
+            userId: newUser.uid,
             message: `${role.replace('_', ' ')} account created successfully`
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error('Create user error:', error)
+        if (error.code === 'auth/email-already-exists') {
+            return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
+        }
         return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
     }
 }

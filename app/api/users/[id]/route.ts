@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
+import { getAdminAuth } from '@/lib/firebase/admin'
 import { getUserRole } from '@/lib/auth/roles'
 
 // DELETE: Delete a reviewer account
@@ -10,14 +11,13 @@ export async function DELETE(
     try {
         const { id: targetUserId } = await params
 
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const userRole = await getUserRole(user.id)
+        const userRole = await getUserRole(user.uid)
         const targetRole = await getUserRole(targetUserId)
 
         // Check permissions
@@ -35,23 +35,13 @@ export async function DELETE(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Delete user role first
-        const { error: roleError } = await supabase
-            .from('user_roles')
-            .delete()
-            .eq('user_id', targetUserId)
-
-        if (roleError) {
-            throw roleError
-        }
-
-        // Note: We can't delete auth.users from client SDK
-        // The role deletion effectively disables the account
-        // For full deletion, use Supabase Admin API or Dashboard
+        // Delete user using Firebase Admin SDK
+        const auth = getAdminAuth()
+        await auth.deleteUser(targetUserId)
 
         return NextResponse.json({
             success: true,
-            message: 'User account disabled successfully'
+            message: 'User account deleted successfully'
         })
     } catch (error) {
         console.error('Delete user error:', error)

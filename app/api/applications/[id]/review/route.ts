@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
 import {
     getApplication,
     updateApplicationReview,
@@ -10,6 +10,7 @@ import {
 import { getUserRole, isJuniorReviewer, isComplianceOfficer, isAdmin } from '@/lib/auth/roles'
 import { signPdfDocument } from '@/lib/documents/sign-pdf'
 import { createActivityLog, generateLogId, type ActivityType } from '@/lib/aws/activity-logs'
+import { getUser } from '@/lib/firebase/admin'
 
 // POST: Review application (approve/reject)
 export async function POST(
@@ -19,10 +20,9 @@ export async function POST(
     try {
         const { id } = await params
 
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const authUser = await getAuthenticatedUser()
 
-        if (!user) {
+        if (!authUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -50,14 +50,18 @@ export async function POST(
             )
         }
 
-        const userRole = await getUserRole(user.id)
-        const isJunior = await isJuniorReviewer(user.id)
-        const isCompliance = await isComplianceOfficer(user.id)
-        const userIsAdmin = await isAdmin(user.id)
+        // Get user details from Firebase Admin
+        const firebaseUser = await getUser(authUser.uid)
+        const userName = firebaseUser?.displayName || authUser.email || 'Unknown'
+
+        const userRole = await getUserRole(authUser.uid)
+        const isJunior = await isJuniorReviewer(authUser.uid)
+        const isCompliance = await isComplianceOfficer(authUser.uid)
+        const userIsAdmin = await isAdmin(authUser.uid)
 
         // Check if this reviewer has already reviewed this application
         const hasAlreadyReviewed = application.reviews?.some(
-            (review: Review) => review.reviewerId === user.id
+            (review: Review) => review.reviewerId === authUser.uid
         )
 
         if (hasAlreadyReviewed && !userIsAdmin) {
@@ -135,8 +139,8 @@ export async function POST(
         // Create review record
         const review: Review = {
             reviewerRole,
-            reviewerId: user.id,
-            reviewerName: user.user_metadata?.name || user.email || 'Unknown',
+            reviewerId: authUser.uid,
+            reviewerName: userName,
             action,
             comment: comment || undefined,
             timestamp: new Date().toISOString(),
@@ -153,10 +157,10 @@ export async function POST(
         await createActivityLog({
             id: generateLogId(),
             timestamp: new Date().toISOString(),
-            actorId: user.id,
-            actorName: user.user_metadata?.name || 'Unknown',
+            actorId: authUser.uid,
+            actorName: userName,
             actorRole: reviewerRole,
-            actorEmail: user.email || 'Unknown',
+            actorEmail: authUser.email || 'Unknown',
             actionType: activityType,
             targetType: 'application',
             targetId: id,
@@ -182,7 +186,7 @@ export async function POST(
                     )
 
                     // Current user is the compliance officer
-                    const complianceOfficerName = user.user_metadata?.name || user.email || 'Unknown'
+                    const complianceOfficerName = userName
                     const juniorReviewerName = juniorReview?.reviewerName || 'Unknown'
 
                     console.log(`[Review] Signing PDF with reviewers:`, { juniorReviewerName, complianceOfficerName })

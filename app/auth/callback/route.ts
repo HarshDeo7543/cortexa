@@ -1,27 +1,23 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+
+// This route is kept for backward compatibility but simplified for Firebase
+// Firebase handles OAuth redirects internally with signInWithPopup
+// This can be used as a landing page after OAuth if needed
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
-    const code = searchParams.get('code')
     const next = searchParams.get('next') ?? '/dashboard'
 
-    if (code) {
-        const supabase = await createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host')
-            const isLocalEnv = process.env.NODE_ENV === 'development'
-            if (isLocalEnv) {
-                return NextResponse.redirect(`${origin}${next}`)
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`)
-            } else {
-                return NextResponse.redirect(`${origin}${next}`)
-            }
-        }
-    }
+    // For Firebase, OAuth is handled client-side with popup
+    // This route just redirects to the desired destination
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const isLocalEnv = process.env.NODE_ENV === 'development'
 
-    // Return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/auth/signin?error=auth_callback_error`)
+    if (isLocalEnv) {
+        return NextResponse.redirect(`${origin}${next}`)
+    } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+    } else {
+        return NextResponse.redirect(`${origin}${next}`)
+    }
 }

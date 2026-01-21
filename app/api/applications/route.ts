@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/firebase/server'
 import { v4 as uuidv4 } from 'uuid'
 import {
     createApplication,
@@ -19,8 +19,7 @@ import {
 // POST: Create new application
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,7 +46,7 @@ export async function POST(request: Request) {
         // Create application
         const application: Application = {
             id: uuidv4(),
-            userId: user.id,
+            userId: user.uid,
             fullName: body.fullName,
             fatherHusbandName: body.fatherHusbandName,
             age: body.age,
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
         await createApplication(application)
 
         // Invalidate user's applications cache
-        await deleteFromCache(CACHE_KEYS.applicationsList(user.id, 'user'))
+        await deleteFromCache(CACHE_KEYS.applicationsList(user.uid, 'user'))
 
         return NextResponse.json({
             success: true,
@@ -90,19 +89,18 @@ export async function POST(request: Request) {
 // GET: List applications (filtered by role)
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = await getAuthenticatedUser()
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const userRole = await getUserRole(user.id)
+        const userRole = await getUserRole(user.uid)
         const { searchParams } = new URL(request.url)
         const status = searchParams.get('status')
 
         // Try to get from cache first (only for user's own applications without status filter)
-        const cacheKey = CACHE_KEYS.applicationsList(user.id, userRole)
+        const cacheKey = CACHE_KEYS.applicationsList(user.uid, userRole)
         if (!status || status === 'all') {
             const cached = await getFromCache<Application[]>(cacheKey)
             if (cached) {
@@ -118,7 +116,7 @@ export async function GET(request: Request) {
             applications = await getAllApplications()
         } else {
             // Regular users see only their own applications
-            applications = await getApplicationsByUser(user.id)
+            applications = await getApplicationsByUser(user.uid)
         }
 
         // Filter by status if provided
@@ -145,4 +143,3 @@ export async function GET(request: Request) {
         )
     }
 }
-

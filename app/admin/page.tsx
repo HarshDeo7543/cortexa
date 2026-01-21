@@ -22,7 +22,6 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 
 interface User {
   id: string
@@ -58,16 +57,18 @@ const DEMO_CREDENTIALS = [
 
 export default function AdminPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const { user, role, loading: authLoading } = useAuth()
   const [users, setUsers] = useState<User[]>([])
-  const [roleLoading, setRoleLoading] = useState(true)
   const [usersLoading, setUsersLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [showPasswords, setShowPasswords] = useState(false)
+  
+  // Use role from auth context (Firebase custom claims)
+  const userRole = (role || 'user') as UserRole
+  const roleLoading = authLoading
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -77,44 +78,19 @@ export default function AdminPage() {
   })
 
   useEffect(() => {
-    if (user) {
-      fetchUserRole()
-    } else if (!authLoading) {
-      setRoleLoading(false)
-    }
-  }, [user, authLoading])
-
-  useEffect(() => {
-    if (!authLoading && !roleLoading) {
-      const canManage = userRole ? ['admin', 'compliance_officer'].includes(userRole) : false
+    if (!authLoading) {
+      const canManage = role ? ['admin', 'compliance_officer'].includes(role) : false
       if (!user || !canManage) {
         router.push("/dashboard")
       }
     }
-  }, [authLoading, roleLoading, user, userRole, router])
+  }, [authLoading, user, role, router])
 
   useEffect(() => {
-    if (userRole && ['admin', 'compliance_officer'].includes(userRole)) {
+    if (role && ['admin', 'compliance_officer'].includes(role)) {
       fetchUsers()
     }
-  }, [userRole])
-
-  const fetchUserRole = async () => {
-    try {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user?.id)
-        .single()
-      
-      setUserRole(data?.role as UserRole || 'user')
-    } catch {
-      setUserRole('user')
-    } finally {
-      setRoleLoading(false)
-    }
-  }
+  }, [role])
 
   const fetchUsers = async () => {
     setUsersLoading(true)

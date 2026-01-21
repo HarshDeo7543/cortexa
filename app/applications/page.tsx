@@ -16,48 +16,32 @@ import {
 } from "lucide-react"
 import type { Application } from "@/lib/aws/dynamodb"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 
 type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
 export default function ApplicationsPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, role, loading: authLoading } = useAuth()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>("all")
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
-  const [roleLoading, setRoleLoading] = useState(true)
+  
+  // Use role from auth context (Firebase custom claims)
+  const userRole = (role || 'user') as UserRole
+  const roleLoading = authLoading
 
   useEffect(() => {
     if (user) {
-      fetchUserRole()
       fetchApplications()
     }
   }, [user])
 
-  const fetchUserRole = async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id)
-      .single()
-    
-    if (data?.role) {
-      setUserRole(data.role as UserRole)
-    } else {
-      setUserRole('user')
-    }
-    setRoleLoading(false)
-  }
-
   // Redirect reviewers to /review page
   useEffect(() => {
-    if (!roleLoading && userRole && userRole !== 'user') {
+    if (!roleLoading && role && role !== 'user') {
       router.push('/review')
     }
-  }, [userRole, roleLoading, router])
+  }, [role, roleLoading, router])
 
   const fetchApplications = async () => {
     try {

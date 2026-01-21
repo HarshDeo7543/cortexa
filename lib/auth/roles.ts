@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCachedUserRole, setCachedUserRole, invalidateUserCaches } from '@/lib/cache/redis'
+import { getUserRole as getFirebaseUserRole, setUserRole as setFirebaseUserRole, listUsers } from '@/lib/firebase/admin'
+import { getCachedUserRole, setCachedUserRole } from '@/lib/cache/redis'
 
 export type UserRole = 'user' | 'junior_reviewer' | 'compliance_officer' | 'admin'
 
@@ -10,7 +10,7 @@ export interface UserWithRole {
     role: UserRole
 }
 
-// Get current user's role from cache or Supabase
+// Get current user's role from cache or Firebase custom claims
 export async function getUserRole(userId: string): Promise<UserRole> {
     // Try cache first
     const cachedRole = await getCachedUserRole(userId)
@@ -18,25 +18,17 @@ export async function getUserRole(userId: string): Promise<UserRole> {
         return cachedRole as UserRole
     }
 
-    // Fallback to Supabase
-    const supabase = await createClient()
+    // Fallback to Firebase Admin
+    const role = await getFirebaseUserRole(userId)
 
-    const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single()
-
-    if (error || !data) {
+    if (!role) {
         return 'user' // Default role
     }
-
-    const role = data.role as UserRole
 
     // Cache the role for next time
     await setCachedUserRole(userId, role)
 
-    return role
+    return role as UserRole
 }
 
 // Check if user has specific role
@@ -73,44 +65,26 @@ export async function isAdmin(userId: string): Promise<boolean> {
     return userRole === 'admin'
 }
 
-// Update user role (admin only)
+// Update user role (admin only) - Uses Firebase Custom Claims
 export async function updateUserRole(userId: string, newRole: UserRole): Promise<boolean> {
-    const supabase = await createClient()
+    const success = await setFirebaseUserRole(userId, newRole)
 
-    const { error } = await supabase
-        .from('user_roles')
-        .upsert({
-            user_id: userId,
-            role: newRole,
-            updated_at: new Date().toISOString(),
-        })
+    if (success) {
+        // Update cache
+        await setCachedUserRole(userId, newRole)
+    }
 
-    return !error
+    return success
 }
 
 // Get all users with roles (admin only)
 export async function getAllUsersWithRoles(): Promise<UserWithRole[]> {
-    const supabase = await createClient()
+    const users = await listUsers()
 
-    const { data, error } = await supabase
-        .from('user_roles')
-        .select(`
-      user_id,
-      role,
-      users:user_id (
-        email,
-        raw_user_meta_data
-      )
-    `)
-
-    if (error || !data) {
-        return []
-    }
-
-    return data.map((item: any) => ({
-        id: item.user_id,
-        email: item.users?.email || '',
-        name: item.users?.raw_user_meta_data?.name || item.users?.raw_user_meta_data?.full_name || '',
-        role: item.role,
+    return users.map((user) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role as UserRole,
     }))
 }
