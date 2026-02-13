@@ -84,7 +84,7 @@ export default function AdminPage() {
         router.push("/dashboard")
       }
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, role, router]) 
 
   useEffect(() => {
     if (role && ['admin', 'compliance_officer'].includes(role)) {
