@@ -1,7 +1,7 @@
 "use client"
 
-import { CheckCircle, Clock, XCircle, FileCheck, FileX, ArrowRight } from "lucide-react"
-import type { ApplicationStatus } from "@/lib/aws/dynamodb"
+import { CheckCircle, Clock, XCircle, FileCheck, FileX, RotateCcw } from "lucide-react"
+import type { ApplicationStatus, WorkflowStep } from "@/lib/aws/dynamodb"
 
 interface StatusStep {
   label: string
@@ -11,11 +11,81 @@ interface StatusStep {
 interface StatusTrackerProps {
   currentStatus: ApplicationStatus
   currentStep: number
-  isReviewer?: boolean // Optional prop to show neutral messages for reviewers
+  isReviewer?: boolean
+  workflow?: WorkflowStep[]
+  workflowCurrentIndex?: number
 }
 
-export default function StatusTracker({ currentStatus, currentStep, isReviewer = false }: StatusTrackerProps) {
+export default function StatusTracker({
+  currentStatus,
+  currentStep,
+  isReviewer = false,
+  workflow,
+  workflowCurrentIndex = 0,
+}: StatusTrackerProps) {
+
   const getSteps = (): StatusStep[] => {
+    // Dynamic multi-officer workflow
+    if (workflow && workflow.length > 0) {
+      const steps: StatusStep[] = [
+        { label: "Submitted", status: "pending" },
+        { label: "Junior Review", status: "pending" },
+      ]
+
+      // Add a step for each compliance officer
+      for (let i = 0; i < workflow.length; i++) {
+        const step = workflow[i]
+        const name = step.officerName.split(' ')[0] // First name only for compact display
+        steps.push({
+          label: workflow.length > 1 ? `CO: ${name}` : "Compliance Review",
+          status: "pending",
+        })
+      }
+
+      steps.push({ label: "Completed", status: "pending" })
+
+      // Set statuses
+      if (currentStatus === 'rejected') {
+        // Everything before the rejection is completed
+        steps[0].status = "completed" // Submitted
+        steps[1].status = "completed" // Junior review
+
+        for (let i = 0; i < workflow.length; i++) {
+          if (workflow[i].status === 'approved') {
+            steps[i + 2].status = "completed"
+          } else if (workflow[i].status === 'rejected') {
+            steps[i + 2].status = "rejected"
+            break
+          }
+        }
+      } else if (currentStatus === 'approved') {
+        steps.forEach(step => step.status = "completed")
+      } else if (currentStatus === 'rolled_back') {
+        steps[0].status = "completed"
+        steps[1].status = "completed"
+        // Show all CO steps as pending (rolled back)
+      } else if (currentStatus === 'compliance_review') {
+        steps[0].status = "completed" // Submitted
+        steps[1].status = "completed" // Junior review
+
+        for (let i = 0; i < workflow.length; i++) {
+          if (workflow[i].status === 'approved') {
+            steps[i + 2].status = "completed"
+          } else if (i === workflowCurrentIndex) {
+            steps[i + 2].status = "current"
+          }
+        }
+      } else if (currentStatus === 'submitted') {
+        steps[0].status = "current"
+      } else if (currentStatus === 'junior_review') {
+        steps[0].status = "completed"
+        steps[1].status = "current"
+      }
+
+      return steps
+    }
+
+    // Legacy fixed-step workflow
     const steps: StatusStep[] = [
       { label: "Submitted", status: "pending" },
       { label: "Junior Review", status: "pending" },
@@ -24,24 +94,24 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
     ]
 
     if (currentStatus === "rejected") {
-      // Show rejection at the failed step
       for (let i = 0; i < currentStep; i++) {
         steps[i].status = "completed"
       }
       steps[currentStep].status = "rejected"
     } else if (currentStatus === "approved") {
-      // All steps completed
       steps.forEach(step => step.status = "completed")
+    } else if (currentStatus === "rolled_back") {
+      steps[0].status = "completed"
+      steps[1].status = "completed"
     } else {
-      // In progress
-      const stepMapping: Record<ApplicationStatus, number> = {
+      const stepMapping: Record<string, number> = {
         submitted: 0,
         junior_review: 1,
         compliance_review: 2,
         approved: 3,
         rejected: -1,
       }
-      const currentIndex = stepMapping[currentStatus]
+      const currentIndex = stepMapping[currentStatus] ?? 0
       steps.forEach((step, index) => {
         if (index < currentIndex) {
           step.status = "completed"
@@ -55,6 +125,7 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
   }
 
   const steps = getSteps()
+  const totalSteps = steps.length
 
   const getIcon = (status: string) => {
     switch (status) {
@@ -70,9 +141,8 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
   }
 
   const getStatusMessage = (): { icon: React.ReactNode; message: string; color: string } => {
-    // Use neutral language for reviewers, personal language for applicants
     const prefix = isReviewer ? "This application" : "Your application"
-    
+
     switch (currentStatus) {
       case "submitted":
         return {
@@ -86,27 +156,42 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
           message: `${prefix} is being reviewed by a Junior Reviewer.`,
           color: "text-amber-500 bg-amber-500/10 border-amber-500/30",
         }
-      case "compliance_review":
+      case "compliance_review": {
+        const currentOfficer = workflow?.[workflowCurrentIndex]
+        const totalOfficers = workflow?.length || 1
+        const completedOfficers = workflow?.filter(w => w.status === 'approved').length || 0
+        const officerInfo = currentOfficer
+          ? ` Currently with ${currentOfficer.officerName} (${completedOfficers}/${totalOfficers} reviewed).`
+          : ''
         return {
           icon: <FileCheck className="w-5 h-5" />,
-          message: `${prefix} passed junior review and is now with the Compliance Officer.`,
+          message: `${prefix} is in compliance review.${officerInfo}`,
           color: "text-purple-500 bg-purple-500/10 border-purple-500/30",
         }
+      }
       case "approved":
         return {
           icon: <CheckCircle className="w-5 h-5" />,
-          message: isReviewer 
-            ? "This application has been approved." 
+          message: isReviewer
+            ? "This application has been approved by all assigned officers."
             : "Congratulations! Your application has been approved. You can now download your document.",
           color: "text-green-500 bg-green-500/10 border-green-500/30",
         }
       case "rejected":
         return {
           icon: <FileX className="w-5 h-5" />,
-          message: isReviewer 
-            ? "This application was rejected." 
+          message: isReviewer
+            ? "This application was rejected."
             : "Your application was rejected. Please review the comments and resubmit if needed.",
           color: "text-destructive bg-destructive/10 border-destructive/30",
+        }
+      case "rolled_back":
+        return {
+          icon: <RotateCcw className="w-5 h-5" />,
+          message: isReviewer
+            ? "This application's verification was rolled back and requires re-review."
+            : "Your application's verification was rolled back. It is being re-reviewed.",
+          color: "text-amber-500 bg-amber-500/10 border-amber-500/30",
         }
       default:
         return {
@@ -118,6 +203,14 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
   }
 
   const statusInfo = getStatusMessage()
+
+  // Calculate progress percentage
+  const completedSteps = steps.filter(s => s.status === 'completed').length
+  const progressPercent = currentStatus === 'approved'
+    ? 100
+    : currentStatus === 'rejected'
+      ? (completedSteps / (totalSteps - 1)) * 100
+      : (completedSteps / (totalSteps - 1)) * 100
 
   return (
     <div className="space-y-6">
@@ -131,8 +224,8 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
       <div className="relative">
         <div className="flex items-center justify-between">
           {steps.map((step, index) => (
-            <div key={index} className="flex flex-col items-center relative z-10">
-              <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 ${
+            <div key={index} className="flex flex-col items-center relative z-10" style={{ flex: 1 }}>
+              <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 ${
                 step.status === "completed" ? "bg-green-500/10 border-green-500" :
                 step.status === "current" ? "bg-primary/10 border-primary" :
                 step.status === "rejected" ? "bg-destructive/10 border-destructive" :
@@ -140,7 +233,7 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
               }`}>
                 {getIcon(step.status)}
               </div>
-              <span className={`mt-2 text-xs font-medium text-center ${
+              <span className={`mt-2 text-[10px] sm:text-xs font-medium text-center leading-tight max-w-[70px] ${
                 step.status === "completed" ? "text-green-500" :
                 step.status === "current" ? "text-primary" :
                 step.status === "rejected" ? "text-destructive" :
@@ -151,18 +244,14 @@ export default function StatusTracker({ currentStatus, currentStep, isReviewer =
             </div>
           ))}
         </div>
-        
+
         {/* Progress Line */}
-        <div className="absolute top-6 left-6 right-6 h-0.5 bg-muted -z-0">
-          <div 
+        <div className="absolute top-5 sm:top-6 left-6 right-6 h-0.5 bg-muted -z-0">
+          <div
             className={`h-full transition-all duration-500 ${
               currentStatus === "rejected" ? "bg-destructive" : "bg-green-500"
             }`}
-            style={{ 
-              width: currentStatus === "approved" ? "100%" :
-                     currentStatus === "rejected" ? `${(currentStep / 3) * 100}%` :
-                     `${(currentStep / 3) * 100}%`
-            }}
+            style={{ width: `${Math.min(progressPercent, 100)}%` }}
           />
         </div>
       </div>

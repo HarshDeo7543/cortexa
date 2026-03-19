@@ -65,7 +65,8 @@ export default function ReviewPage() {
     pending: applications.filter(app => 
       app.status === "submitted" || 
       app.status === "junior_review" || 
-      app.status === "compliance_review"
+      app.status === "compliance_review" ||
+      app.status === "rolled_back"
     ).length,
     approved: applications.filter(app => app.status === "approved").length,
     rejected: applications.filter(app => app.status === "rejected").length,

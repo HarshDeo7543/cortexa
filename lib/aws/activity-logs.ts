@@ -18,7 +18,11 @@ export function getDynamoClient(): DynamoDBDocumentClient {
                 secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
             },
         })
-        dynamoClient = DynamoDBDocumentClient.from(client)
+        dynamoClient = DynamoDBDocumentClient.from(client, {
+            marshallOptions: {
+                removeUndefinedValues: true,
+            },
+        })
     }
     return dynamoClient
 }
@@ -33,6 +37,12 @@ export type ActivityType =
     | 'user_role_changed'
     | 'document_signed'
     | 'login'
+    | 'workflow_defined'
+    | 'document_rolled_back'
+    | 'reassignment_requested'
+    | 'reassignment_accepted'
+    | 'reassignment_rejected'
+    | 'user_notified'
 
 export interface ActivityLog {
     id: string
