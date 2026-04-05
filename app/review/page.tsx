@@ -126,7 +126,7 @@ export default function ReviewPage() {
       approved: { bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400", label: "Approved" },
       rejected: { bg: "bg-rose-50 dark:bg-rose-900/20", text: "text-rose-600 dark:text-rose-400", label: "Rejected"},
     }
-    return info[status] || info.submitted
+    return info[status] || info.submitted 
   }
 
   const getRoleLabel = () => {
